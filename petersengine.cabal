@@ -1,0 +1,41 @@
+Name:                PetersEngine
+Version:             0.0.1
+Cabal-Version:       >= 1.2.3
+Category:            Game
+Synopsis:            A simple graphics and game engine for personal use.
+Description:         This is used as a framework to create test-beds for my ideas.
+License:             BSD3
+License-File:        LICENSE
+Author:              Peter Higley <phigley@gmail.com>
+Maintainer:          Peter Higley <phigley@gmail.com>
+Homepage:            http://github.com/phigley/PetersEngine
+Build-Type:          Simple
+
+Flag samples
+     Description: Build the samples
+     Default: False
+
+Library
+        build-depends: base >= 3 && < 5
+                     , GLFW == 0.4.*
+                     , OpenGL == 2.4.*
+                     , Vec == 0.9.*
+                     , transformers == 0.1.*
+                     , StateVar == 1.0.*
+        exposed-modules: Graphics.UI.Engine
+
+Executable simple_engine_use
+           main-is: simple.hs
+           hs-source-dirs: samples, .
+           other-modules: Graphics.UI.Engine
+
+           if flag(samples)
+              build-depends: base >= 3 && < 5
+                           , Vec == 0.9.*
+                           , monads-fd == 0.0.*
+           else
+              buildable: False
+
+
+
+           
