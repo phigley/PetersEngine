@@ -1,0 +1,7 @@
+# VI swap files
+*.swp
+
+# Cabal's build directory
+dist/*
+
+
