@@ -10,6 +10,7 @@ Author:              Peter Higley <phigley@gmail.com>
 Maintainer:          Peter Higley <phigley@gmail.com>
 Homepage:            http://github.com/phigley/PetersEngine
 Build-Type:          Simple
+Cabal-Version: >= 1.6
 
 Flag samples
      Description: Build the samples
@@ -22,6 +23,7 @@ Library
                      , Vec == 0.9.*
                      , transformers == 0.1.*
                      , StateVar == 1.0.*
+        build-type: Simple
         exposed-modules: Graphics.UI.Engine
 
 Executable simple_engine_use
@@ -35,7 +37,6 @@ Executable simple_engine_use
                            , monads-fd == 0.0.*
            else
               buildable: False
-
 
 
            
