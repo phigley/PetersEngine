@@ -60,7 +60,12 @@ waitForRelease = Action $ do
 
 
 engine :: Engine ()
-engine = evalStateT (loop waitForPress) []
+engine = evalStateT (loop waitForPress) [(Vec2F 0 0), (Vec2F 1 1)]
 
+windowSpec :: WindowSpec
+windowSpec = WindowSpec { windowWidth = 400
+                        , windowHeight = 400
+                        , windowTitle = "Simple Engine"
+                        }
 main :: IO ()
-main =   executeEngine engine
+main =   executeEngine windowSpec engine

@@ -2,6 +2,7 @@
 
 module Graphics.UI.Engine 
        ( Engine
+       , WindowSpec(..)
        , executeEngine
        , startFrame
        , renderLineList
@@ -24,14 +25,22 @@ import Control.Monad.Trans
 
 newtype Engine a = Engine { runEngine :: IO a }
               deriving (Monad, MonadIO)
+                       
+data WindowSpec = WindowSpec { windowWidth :: Int
+                             , windowHeight :: Int 
+                             , windowTitle :: String 
+                             }
 
-executeEngine :: Engine () -> IO ()
-executeEngine innerLoop = do
+
+executeEngine :: WindowSpec -> Engine () -> IO ()
+executeEngine spec innerLoop = do
   initializeGLFW
   
   -- open window
-  GLFW.openWindow (GL.Size 400 400) [GLFW.DisplayAlphaBits 8] GLFW.Window
-  GLFW.windowTitle $= "GLFW Demo"
+  let windowSize = GL.Size (fromIntegral . windowWidth $ spec) 
+                           (fromIntegral . windowHeight $ spec)
+  GLFW.openWindow windowSize [GLFW.DisplayAlphaBits 8] GLFW.Window
+  GLFW.windowTitle $= windowTitle spec
   
     -- This must happen after a window has been opened.
   initializeGL
