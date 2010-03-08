@@ -57,7 +57,7 @@ waitForRelease = Action $ do
 
 
 engine :: Engine ()
-engine = evalStateT (loop waitForPress) [(Vec2F 0 0), (Vec2F 1 1)]
+engine = evalStateT (loop waitForPress) []
 
 windowSpec :: WindowSpec
 windowSpec = WindowSpec { windowWidth = 400
