@@ -40,19 +40,16 @@ waitForPress = Action $ do
     else do
       -- when left mouse button is pressed, add the point
       -- to lines and switch to waitForRelease action.
-      (lift getMousePos) >>= (modify . startLine . vec2IToVec2F)
+      (lift getMousePos) >>= (modify . startLine)
       mousePos <- lift getMousePos
       liftIO $ print mousePos
       return waitForRelease
  
-vec2IToVec2F :: Vec2I -> Vec2F
-vec2IToVec2F (Vec2I xi yi) = Vec2F (fromIntegral xi) (fromIntegral yi)
-
 waitForRelease :: Action ModelT
 waitForRelease = Action $ do
   -- Keep track of mouse movement while waiting for button 
   -- release
-  (lift getMousePos) >>= (modify . updateEndPoint .vec2IToVec2F)
+  (lift getMousePos) >>= (modify . updateEndPoint)
   b <- lift isLMBPressed
   if (not b)
     then return waitForPress

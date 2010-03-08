@@ -22,8 +22,15 @@ import Data.Vec.Packed
 import Data.IORef
 import Control.Monad
 import Control.Monad.Trans
+import Control.Monad.State
 
-newtype Engine a = Engine { runEngine :: IO a }
+data EngineData = EngineData 
+                  { projection :: IORef (Vec2F, Vec2F)
+                  }
+
+type EngineT = StateT EngineData IO
+
+newtype Engine a = Engine { runEngine :: EngineT a }
               deriving (Monad, MonadIO)
                        
 data WindowSpec = WindowSpec { windowWidth :: Int
@@ -53,8 +60,11 @@ executeEngine spec innerLoop = do
   -- OpenGL Viewport.
   projection_ref <- newIORef ((Vec2F (-1) (-1)), (Vec2F 1 1))
   GLFW.windowSizeCallback $= resizeWindow projection_ref
+  
+  let engineData = EngineData { projection = projection_ref }
+      
   -- invoke the active drawing loop
-  runEngine innerLoop
+  evalStateT (runEngine innerLoop) engineData
   -- finish up
   GLFW.closeWindow
   GLFW.terminate
@@ -83,17 +93,22 @@ resizeWindow projection_ref size@(GL.Size w h) = do
   GL.ortho2D (realToFrac x0) (realToFrac x1) (realToFrac y1) (realToFrac y0)
 
 isLMBPressed :: Engine Bool
-isLMBPressed = Engine $ do
+isLMBPressed = Engine . liftIO $ do
   b <- GLFW.getMouseButton $ GLFW.ButtonLeft
   return (b == GLFW.Press)
 
-getMousePos :: Engine Vec2I
+getMousePos :: Engine Vec2F
 getMousePos = Engine $ do
-      (GL.Position x y) <- SV.get $ GLFW.mousePos 
-      return $ Vec2I (fromIntegral x) (fromIntegral y)
+      (GL.Position x y) <- liftIO . SV.get $ GLFW.mousePos 
+      (GL.Size wx wy) <- liftIO . SV.get $ GLFW.windowSize
+      engineData <- get
+      ( (Vec2F minpx minpy), (Vec2F maxpx maxpy) ) <- liftIO . readIORef $ projection engineData
+      let xf = minpx + (maxpx - minpx)*(fromIntegral x)/(fromIntegral wx)
+          yf = minpy + (maxpy - minpy)*(fromIntegral y)/(fromIntegral wy)
+      return $ Vec2F xf yf
       
 startFrame :: Engine Bool
-startFrame = Engine $ do
+startFrame = Engine . liftIO $ do
   GLFW.sleep 0.001
   GLFW.swapBuffers
   GL.clear [GL.ColorBuffer]
@@ -105,15 +120,15 @@ startFrame = Engine $ do
   
   
 renderLineList :: [Vec2F] -> Engine ()
-renderLineList lines = Engine $ do
+renderLineList lines = Engine . liftIO $ do
   GL.color $ color3 1 0 0
   GL.renderPrimitive GL.Lines $ mapM_  point2vertex lines
   where 
     point2vertex (Vec2F x y) = GL.vertex $ vertex3 (realToFrac x) (realToFrac y) 0
  
 renderString :: Vec2F -> String -> Engine ()
-renderString (Vec2F x y) str = Engine . GL.preservingMatrix $ do    
-  GL.translate (GL.Vector3 (realToFrac x) (realToFrac y + 16) (0::GL.GLfloat))
+renderString (Vec2F x y) str = Engine . liftIO . GL.preservingMatrix $ do    
+  GL.translate (GL.Vector3 (realToFrac x) (realToFrac y) (0::GL.GLfloat))
   GL.scale 1 (-1) (1::GL.GLfloat)
   GLFW.renderString GLFW.Fixed8x16 str
 
@@ -124,3 +139,9 @@ vertex3 = GL.Vertex3
 -- This exists just to fix type.
 color3 :: GL.GLfloat -> GL.GLfloat -> GL.GLfloat -> GL.Color3 GL.GLfloat
 color3 = GL.Color3
+
+vec2IToVec2F :: Vec2I -> Vec2F
+vec2IToVec2F (Vec2I xi yi) = Vec2F (fromIntegral xi) (fromIntegral yi)
+
+glSizeToVec2F :: GL.Size -> Vec2F
+glSizeToVec2F (GL.Size h w) = Vec2F (fromIntegral h) (fromIntegral w)

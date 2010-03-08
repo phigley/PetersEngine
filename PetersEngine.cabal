@@ -23,6 +23,7 @@ Library
                      , Vec == 0.9.*
                      , transformers == 0.1.*
                      , StateVar == 1.0.*
+                     , monads-fd == 0.0.*
         exposed-modules: Graphics.UI.Engine
 
 Executable simple_engine_use
