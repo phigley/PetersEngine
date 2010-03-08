@@ -35,12 +35,12 @@ updateEndPoint p' = (p':) . tail
 waitForPress :: Action ModelT
 waitForPress = Action $ do
   b <- lift isLMBPressed
-  if (not b)
+  if not b
     then return waitForPress
     else do
       -- when left mouse button is pressed, add the point
       -- to lines and switch to waitForRelease action.
-      (lift getMousePos) >>= (modify . startLine)
+      lift getMousePos >>= modify . startLine
       mousePos <- lift getMousePos
       liftIO $ print mousePos
       return waitForRelease
@@ -49,9 +49,9 @@ waitForRelease :: Action ModelT
 waitForRelease = Action $ do
   -- Keep track of mouse movement while waiting for button 
   -- release
-  (lift getMousePos) >>= (modify . updateEndPoint)
+  lift getMousePos >>= modify . updateEndPoint
   b <- lift isLMBPressed
-  if (not b)
+  if not b
     then return waitForPress
     else return waitForRelease
 

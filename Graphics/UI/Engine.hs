@@ -58,7 +58,7 @@ executeEngine spec innerLoop = do
   -- set 2D orthogonal view inside windowSizeCallback because
   -- any change to the Window size should result in different
   -- OpenGL Viewport.
-  projection_ref <- newIORef ((Vec2F (-1) (-1)), (Vec2F 1 1))
+  projection_ref <- newIORef (Vec2F (-1) (-1), Vec2F 1 1)
   GLFW.windowSizeCallback $= resizeWindow projection_ref
   
   let engineData = EngineData { projection = projection_ref }
@@ -89,22 +89,21 @@ resizeWindow projection_ref size@(GL.Size w h) = do
   GL.viewport $= (GL.Position 0 0, size)
   GL.matrixMode $= GL.Projection
   GL.loadIdentity
-  ((Vec2F x0 y0), (Vec2F x1 y1)) <- readIORef projection_ref
+  (Vec2F x0 y0, Vec2F x1 y1) <- readIORef projection_ref
   GL.ortho2D (realToFrac x0) (realToFrac x1) (realToFrac y1) (realToFrac y0)
 
 isLMBPressed :: Engine Bool
-isLMBPressed = Engine . liftIO $ do
-  b <- GLFW.getMouseButton $ GLFW.ButtonLeft
-  return (b == GLFW.Press)
+isLMBPressed = Engine . liftIO 
+               $ fmap (GLFW.Press == ) (GLFW.getMouseButton GLFW.ButtonLeft)
 
 getMousePos :: Engine Vec2F
 getMousePos = Engine $ do
       (GL.Position x y) <- liftIO . SV.get $ GLFW.mousePos 
       (GL.Size wx wy) <- liftIO . SV.get $ GLFW.windowSize
       engineData <- get
-      ( (Vec2F minpx minpy), (Vec2F maxpx maxpy) ) <- liftIO . readIORef $ projection engineData
-      let xf = minpx + (maxpx - minpx)*(fromIntegral x)/(fromIntegral wx)
-          yf = minpy + (maxpy - minpy)*(fromIntegral y)/(fromIntegral wy)
+      ( Vec2F minpx minpy, Vec2F maxpx maxpy ) <- liftIO . readIORef $ projection engineData
+      let xf = minpx + (maxpx - minpx)* fromIntegral x / fromIntegral wx
+          yf = minpy + (maxpy - minpy)* fromIntegral y / fromIntegral wy
       return $ Vec2F xf yf
       
 startFrame :: Engine Bool
