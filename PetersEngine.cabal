@@ -38,5 +38,17 @@ Executable simple_engine_use
            else
               buildable: False
 
+Executable drawlines_engine_use
+           main-is: draw_lines.hs
+           hs-source-dirs: samples, .
+           other-modules: Graphics.UI.Engine
+
+           if flag(samples)
+              build-depends: base >= 3 && < 5
+                           , Vec == 0.9.*
+                           , monads-fd == 0.0.*
+           else
+              buildable: False
+
 
            

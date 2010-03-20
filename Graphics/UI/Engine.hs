@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, RankNTypes #-}
 
 module Graphics.UI.Engine 
        ( Engine
@@ -6,6 +6,7 @@ module Graphics.UI.Engine
        , executeEngine
        , startFrame
        , renderLineList
+       , renderLineStrip
        , renderString
        , isLMBPressed
        , getMousePos
@@ -39,8 +40,12 @@ data WindowSpec = WindowSpec { windowWidth :: Int
                              }
 
 
-executeEngine :: WindowSpec -> Engine () -> IO ()
-executeEngine spec innerLoop = do
+executeEngine :: forall gameState . 
+                WindowSpec   -- initial window configuration
+                -> gameState
+                -> (gameState -> Engine gameState)
+                -> IO ()
+executeEngine spec initialGameState renderFrame = do
   initializeGLFW
   
   -- open window
@@ -64,10 +69,20 @@ executeEngine spec innerLoop = do
   let engineData = EngineData { projection = projection_ref }
       
   -- invoke the active drawing loop
-  evalStateT (runEngine innerLoop) engineData
+  evalStateT (runEngine $ loop renderFrame initialGameState) engineData
+  
   -- finish up
   GLFW.closeWindow
   GLFW.terminate
+
+
+loop :: forall gameState . (gameState -> Engine gameState) -> gameState -> Engine ()
+loop executeFrame currentGameState = do
+  continue <- startFrame
+  when continue $ do
+    newGameState <- executeFrame currentGameState
+    loop executeFrame newGameState
+
 
 initializeGLFW :: IO ()
 initializeGLFW = do
@@ -125,6 +140,13 @@ renderLineList lines = Engine . liftIO $ do
   where 
     point2vertex (Vec2F x y) = GL.vertex $ vertex3 (realToFrac x) (realToFrac y) 0
  
+renderLineStrip :: [Vec2F] -> Engine ()
+renderLineStrip linestrip = Engine . liftIO $ do
+  GL.color $ color3 1 0 0
+  GL.renderPrimitive GL.LineStrip $ mapM_  point2vertex linestrip
+  where 
+    point2vertex (Vec2F x y) = GL.vertex $ vertex3 (realToFrac x) (realToFrac y) 0
+
 renderString :: Vec2F -> String -> Engine ()
 renderString (Vec2F x y) str = Engine . liftIO . GL.preservingMatrix $ do    
   GL.translate (GL.Vector3 (realToFrac x) (realToFrac y) (0::GL.GLfloat))
