@@ -21,9 +21,8 @@ Library
                      , GLFW == 0.4.*
                      , OpenGL == 2.4.*
                      , Vec == 0.9.*
-                     , transformers == 0.1.*
+                     , mtl == 1.1.*
                      , StateVar == 1.0.*
-                     , monads-fd == 0.0.*
         exposed-modules: Graphics.UI.Engine
 
 Executable simple_engine_use
@@ -34,7 +33,7 @@ Executable simple_engine_use
            if flag(samples)
               build-depends: base >= 3 && < 5
                            , Vec == 0.9.*
-                           , monads-fd == 0.0.*
+                           , mtl == 1.1.*
            else
               buildable: False
 
@@ -46,7 +45,7 @@ Executable drawlines_engine_use
            if flag(samples)
               build-depends: base >= 3 && < 5
                            , Vec == 0.9.*
-                           , monads-fd == 0.0.*
+                           , mtl == 1.1.*
            else
               buildable: False
 
