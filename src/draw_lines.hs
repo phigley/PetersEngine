@@ -24,9 +24,11 @@ initialGameState = GameState { lineList = []
 
 updateFrame :: GameState -> Engine GameState
 updateFrame gameState = do
-  renderLineList $ lineList gameState
   execStateT (inputHandler gameState) gameState
-  
+
+renderFrame :: GameState -> Render
+renderFrame gameState = [ renderLineList $ lineList gameState ]
+
   
 
       
@@ -70,4 +72,4 @@ windowSpec = WindowSpec { windowWidth = 400
                         , windowTitle = "Simple Engine"
                         }
 main :: IO ()
-main =   executeEngine windowSpec initialGameState updateFrame
+main =   executeEngine windowSpec initialGameState updateFrame renderFrame

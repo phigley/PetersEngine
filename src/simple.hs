@@ -26,8 +26,8 @@ windowSpec = WindowSpec { windowWidth = 400
                         , windowTitle = "Simple Engine"
                         }
              
-renderBox :: PointList -> Engine PointList
-renderBox ps = renderLineStrip ps >> return ps
+renderBox :: PointList -> Render
+renderBox ps = [ renderLineStrip ps ]
 
 main :: IO ()
-main =   executeEngine windowSpec box renderBox
+main =   executeEngine windowSpec box (\gs -> return gs) renderBox

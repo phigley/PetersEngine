@@ -2,12 +2,12 @@
 
 module Graphics.UI.Engine 
        ( Engine
+       , Render
        , WindowSpec(..)
        , executeEngine
-       , startFrame
        , renderLineList
        , renderLineStrip
-       , renderString
+--       , renderString
        , isLMBPressed
        , getMousePos
        )  where
@@ -16,24 +16,26 @@ module Graphics.UI.Engine
 import qualified Graphics.Rendering.OpenGL as GL
 import qualified Graphics.UI.GLFW as GLFW
 
-import qualified Data.StateVar as SV
-import Data.StateVar ( ($=) )
+import Graphics.Rendering.OpenGL ( ($=) )
 
 import Data.Vec.Packed
 import Data.IORef
 import Control.Monad
 import Control.Monad.Trans
-import Control.Monad.State
+import Control.Monad.Reader
 
 data EngineData = EngineData 
                   { projection :: IORef (Vec2F, Vec2F)
                   }
 
-type EngineT = StateT EngineData IO
+type EngineT = ReaderT EngineData IO
 
 newtype Engine a = Engine { runEngine :: EngineT a }
               deriving (Monad, MonadIO)
                        
+newtype RenderShape = RenderShape { runRenderShape :: IO () }
+type Render = [RenderShape]
+                 
 data WindowSpec = WindowSpec { windowWidth :: Int
                              , windowHeight :: Int 
                              , windowTitle :: String 
@@ -41,18 +43,24 @@ data WindowSpec = WindowSpec { windowWidth :: Int
 
 
 executeEngine :: forall gameState . 
-                WindowSpec   -- initial window configuration
-                -> gameState
-                -> (gameState -> Engine gameState)
+                WindowSpec   -- | initial window configuration
+                -> gameState  -- | initial game state
+                -> (gameState -> Engine gameState) -- | update function
+                -> (gameState -> Render) -- | render function
                 -> IO ()
-executeEngine spec initialGameState renderFrame = do
+executeEngine spec initialGameState executeFrame renderFrame = do
   initializeGLFW
   
   -- open window
-  let windowSize = GL.Size (fromIntegral . windowWidth $ spec) 
-                           (fromIntegral . windowHeight $ spec)
-  GLFW.openWindow windowSize [GLFW.DisplayAlphaBits 8] GLFW.Window
-  GLFW.windowTitle $= windowTitle spec
+  let width = fromIntegral . windowWidth $ spec 
+      height = fromIntegral . windowHeight $ spec
+      displayOptions = GLFW.defaultDisplayOptions 
+                         { GLFW.displayOptions_width = width
+                         , GLFW.displayOptions_height = height
+                         , GLFW.displayOptions_numAlphaBits = 8
+                         }
+  GLFW.openWindow displayOptions
+  GLFW.setWindowTitle $ windowTitle spec
   
     -- This must happen after a window has been opened.
   initializeGL
@@ -64,31 +72,36 @@ executeEngine spec initialGameState renderFrame = do
   -- any change to the Window size should result in different
   -- OpenGL Viewport.
   projection_ref <- newIORef (Vec2F (-1) (-1), Vec2F 1 1)
-  GLFW.windowSizeCallback $= resizeWindow projection_ref
+  GLFW.setWindowSizeCallback $ resizeWindow projection_ref
   
   let engineData = EngineData { projection = projection_ref }
       
   -- invoke the active drawing loop
-  evalStateT (runEngine $ loop renderFrame initialGameState) engineData
+  loop engineData executeFrame renderFrame initialGameState
   
   -- finish up
   GLFW.closeWindow
   GLFW.terminate
 
 
-loop :: forall gameState . (gameState -> Engine gameState) -> gameState -> Engine ()
-loop executeFrame currentGameState = do
+loop :: forall gameState . 
+       EngineData
+       -> (gameState -> Engine gameState) 
+       -> (gameState -> Render) 
+       -> gameState 
+       -> IO ()
+loop engineData executeFrame renderFrame currentGameState = do
   continue <- startFrame
   when continue $ do
-    newGameState <- executeFrame currentGameState
-    loop executeFrame newGameState
+    mapM_ runRenderShape $ renderFrame currentGameState
+    newGameState <- runReaderT (runEngine $ executeFrame currentGameState) engineData
+    loop engineData executeFrame renderFrame newGameState
 
 
 initializeGLFW :: IO ()
 initializeGLFW = do
   GLFW.initialize
-  GLFW.swapInterval $= 1
-  GLFW.enableSpecial GLFW.StickyKey
+  GLFW.setWindowBufferSwapInterval 1
 
 initializeGL :: IO ()
 initializeGL = do
@@ -99,8 +112,9 @@ initializeGL = do
   GL.blendFunc $= (GL.SrcAlpha, GL.OneMinusSrcAlpha)
   GL.lineWidth $= 1.5
 
-resizeWindow :: IORef (Vec2F, Vec2F) -> GL.Size -> IO ()
-resizeWindow projection_ref size@(GL.Size w h) = do
+resizeWindow :: IORef (Vec2F, Vec2F) -> Int -> Int -> IO ()
+resizeWindow projection_ref w h = do
+  let size = GL.Size (fromIntegral w) (fromIntegral h)
   GL.viewport $= (GL.Position 0 0, size)
   GL.matrixMode $= GL.Projection
   GL.loadIdentity
@@ -109,49 +123,49 @@ resizeWindow projection_ref size@(GL.Size w h) = do
 
 isLMBPressed :: Engine Bool
 isLMBPressed = Engine . liftIO 
-               $ fmap (GLFW.Press == ) (GLFW.getMouseButton GLFW.ButtonLeft)
+               $ GLFW.mouseButtonIsPressed GLFW.MouseButton0
 
 getMousePos :: Engine Vec2F
 getMousePos = Engine $ do
-      (GL.Position x y) <- liftIO . SV.get $ GLFW.mousePos 
-      (GL.Size wx wy) <- liftIO . SV.get $ GLFW.windowSize
-      engineData <- get
+      (x, y) <- liftIO GLFW.getMousePosition 
+      (wx, wy) <- liftIO GLFW.getWindowDimensions
+      engineData <- ask
       ( Vec2F minpx minpy, Vec2F maxpx maxpy ) <- liftIO . readIORef $ projection engineData
       let xf = minpx + (maxpx - minpx)* fromIntegral x / fromIntegral wx
           yf = minpy + (maxpy - minpy)* fromIntegral y / fromIntegral wy
       return $ Vec2F xf yf
       
-startFrame :: Engine Bool
-startFrame = Engine . liftIO $ do
+startFrame :: IO Bool
+startFrame = do
   GLFW.sleep 0.001
   GLFW.swapBuffers
   GL.clear [GL.ColorBuffer]
   
-  esc_pressed <- GLFW.getKey GLFW.ESC
-  window_opened <- SV.get $ GLFW.windowParam GLFW.Opened
+  esc_pressed <- GLFW.keyIsPressed GLFW.KeyEsc
+  window_opened <- GLFW.windowIsOpen
   
-  return $ (window_opened /= 0) && (esc_pressed /= GLFW.Press)
+  return $ window_opened && not esc_pressed
   
   
-renderLineList :: [Vec2F] -> Engine ()
-renderLineList lines = Engine . liftIO $ do
+renderLineList :: [Vec2F] -> RenderShape
+renderLineList lines = RenderShape $ do
   GL.color $ color3 1 0 0
   GL.renderPrimitive GL.Lines $ mapM_  point2vertex lines
   where 
     point2vertex (Vec2F x y) = GL.vertex $ vertex3 (realToFrac x) (realToFrac y) 0
  
-renderLineStrip :: [Vec2F] -> Engine ()
-renderLineStrip linestrip = Engine . liftIO $ do
+renderLineStrip :: [Vec2F] -> RenderShape
+renderLineStrip linestrip = RenderShape $ do
   GL.color $ color3 1 0 0
   GL.renderPrimitive GL.LineStrip $ mapM_  point2vertex linestrip
   where 
     point2vertex (Vec2F x y) = GL.vertex $ vertex3 (realToFrac x) (realToFrac y) 0
 
-renderString :: Vec2F -> String -> Engine ()
-renderString (Vec2F x y) str = Engine . liftIO . GL.preservingMatrix $ do    
-  GL.translate (GL.Vector3 (realToFrac x) (realToFrac y) (0::GL.GLfloat))
-  GL.scale 1 (-1) (1::GL.GLfloat)
-  GLFW.renderString GLFW.Fixed8x16 str
+--renderString :: Vec2F -> String -> Engine ()
+--renderString (Vec2F x y) str = Engine . liftIO . GL.preservingMatrix $ do    
+--  GL.translate (GL.Vector3 (realToFrac x) (realToFrac y) (0::GL.GLfloat))
+--  GL.scale 1 (-1) (1::GL.GLfloat)
+--  GLFW.renderString GLFW.Fixed8x16 str
 
 -- This exists just to fix type.
 vertex3 :: GL.GLfloat -> GL.GLfloat -> GL.GLfloat -> GL.Vertex3 GL.GLfloat
