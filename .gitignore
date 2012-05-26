@@ -2,6 +2,9 @@
 *.swp
 
 # Cabal's build directory
-dist/*
+dist/
 
+# Eclipse
+.dist-buildwrapper/
+.project
 
