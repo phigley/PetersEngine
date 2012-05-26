@@ -23,11 +23,12 @@ Library
                      , Vec == 0.9.*
                      , mtl == 1.1.*
                      , StateVar == 1.0.*
+        hs-source-dirs: src
         exposed-modules: Graphics.UI.Engine
 
 Executable simple_engine_use
            main-is: simple.hs
-           hs-source-dirs: samples, .
+           hs-source-dirs: src/samples
            other-modules: Graphics.UI.Engine
 
            if flag(samples)
@@ -39,7 +40,7 @@ Executable simple_engine_use
 
 Executable drawlines_engine_use
            main-is: draw_lines.hs
-           hs-source-dirs: samples, .
+           hs-source-dirs: src/samples
            other-modules: Graphics.UI.Engine
 
            if flag(samples)
