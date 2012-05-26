@@ -9,7 +9,7 @@ License-File:   LICENSE
 Author:         Peter Higley <phigley@gmail.com>
 Maintainer:     Peter Higley <phigley@gmail.com>
 Homepage:       http://github.com/phigley/PetersEngine
-Build-Type:     Simple
+Build-Type:     Custom  
 
 Executable drawlines_engine_use
   default-language : Haskell2010
