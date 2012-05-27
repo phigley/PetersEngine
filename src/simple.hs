@@ -1,8 +1,6 @@
 module Main where
 
-import Control.Monad
 import Control.Monad.State
-import Control.Monad.Trans
 
 import Graphics.UI.Engine
 import Data.Vec.Packed
@@ -14,10 +12,10 @@ type ModelT = StateT PointList Engine
 data Action m = Action { executeAction :: m (Action m) }
 
 box :: PointList
-box = [ Vec2F  (0.25)  (0.25)
-      , Vec2F (-0.25)  (0.25)
+box = [ Vec2F   0.25    0.25
+      , Vec2F (-0.25)   0.25
       , Vec2F (-0.25) (-0.25)
-      , Vec2F  (0.25) (-0.25) 
+      , Vec2F   0.25  (-0.25) 
       , head box ]
 
 windowSpec :: WindowSpec
@@ -30,4 +28,4 @@ renderBox :: PointList -> Render
 renderBox ps = [ renderLineStrip ps ]
 
 main :: IO ()
-main =   executeEngine windowSpec box (\gs -> return gs) renderBox
+main =   executeEngine windowSpec box return renderBox

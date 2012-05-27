@@ -16,6 +16,7 @@ Executable drawlines_engine_use
   main-is:         draw_lines.hs
   hs-source-dirs:  src
   build-depends:   base == 4.*,
+                   cabal-macosx,
                    OpenGL,
                    GLFW-b,
                    Vec,
@@ -24,8 +25,8 @@ Executable drawlines_engine_use
 
 executable simple
   default-language : Haskell2010
-  build-depends:   
-                   base >= 4,
+  build-depends:   base >= 4,
+                   cabal-macosx,
                    OpenGL,
                    GLFW-b,
                    Vec,

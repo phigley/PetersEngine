@@ -2,7 +2,6 @@ module Main where
 
 import Control.Monad
 import Control.Monad.State
-import Control.Monad.Trans
 
 import Graphics.UI.Engine
 import Data.Vec.Packed
@@ -23,7 +22,7 @@ initialGameState = GameState { lineList = []
                              }
 
 updateFrame :: GameState -> Engine GameState
-updateFrame gameState = do
+updateFrame gameState =
   execStateT (inputHandler gameState) gameState
 
 renderFrame :: GameState -> Render
@@ -47,7 +46,7 @@ waitForPress = do
     mousePos <- lift getMousePos
     liftIO $ print mousePos
     gs <- get
-    let gs' = gs { lineList = (startLine mousePos) (lineList gs)
+    let gs' = gs { lineList = startLine mousePos (lineList gs)
                  , inputHandler = waitForRelease
                  }
     put gs'
@@ -61,8 +60,7 @@ waitForRelease = do
   mousePos <- lift getMousePos 
   put $ gs { lineList = updateEndPoint mousePos (lineList gs) }
   b <- lift isLMBPressed
-  when (not b) $ do
-    gs <- get
+  unless b $
     put $ gs { inputHandler = waitForPress }
 
 

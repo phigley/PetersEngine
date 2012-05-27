@@ -41,6 +41,12 @@ data WindowSpec = WindowSpec { windowWidth :: Int
                              , windowTitle :: String 
                              }
 
+doOpenWindow :: GLFW.DisplayOptions -> IO () -> IO ()
+doOpenWindow displayOptions onSucess = do
+    success <- GLFW.openWindow displayOptions
+    if success
+      then onSucess >> GLFW.closeWindow
+      else putStrLn "Failed to open window."
 
 executeEngine :: forall gameState . 
                 WindowSpec   -- | initial window configuration
@@ -48,9 +54,7 @@ executeEngine :: forall gameState .
                 -> (gameState -> Engine gameState) -- | update function
                 -> (gameState -> Render) -- | render function
                 -> IO ()
-executeEngine spec initialGameState executeFrame renderFrame = do
-  initializeGLFW
-  
+executeEngine spec initialGameState executeFrame renderFrame =   initializeGLFW $ do
   -- open window
   let width = fromIntegral . windowWidth $ spec 
       height = fromIntegral . windowHeight $ spec
@@ -59,28 +63,27 @@ executeEngine spec initialGameState executeFrame renderFrame = do
                          , GLFW.displayOptions_height = height
                          , GLFW.displayOptions_numAlphaBits = 8
                          }
-  GLFW.openWindow displayOptions
-  GLFW.setWindowTitle $ windowTitle spec
-  
-    -- This must happen after a window has been opened.
-  initializeGL
-  
-  -- set the color to clear background
-  GL.clearColor $= GL.Color4 0 0 0 0
-  
-  -- set 2D orthogonal view inside windowSizeCallback because
-  -- any change to the Window size should result in different
-  -- OpenGL Viewport.
-  projection_ref <- newIORef (Vec2F (-1) (-1), Vec2F 1 1)
-  GLFW.setWindowSizeCallback $ resizeWindow projection_ref
-  
-  let engineData = EngineData { projection = projection_ref }
+                         
+  doOpenWindow displayOptions $ do
+      GLFW.setWindowTitle $ windowTitle spec
       
-  -- invoke the active drawing loop
-  loop engineData executeFrame renderFrame initialGameState
-  
-  -- finish up
-  GLFW.closeWindow
+        -- This must happen after a window has been opened.
+      initializeGL
+      
+      -- set the color to clear background
+      GL.clearColor $= GL.Color4 0 0 0 0
+      
+      -- set 2D orthogonal view inside windowSizeCallback because
+      -- any change to the Window size should result in different
+      -- OpenGL Viewport.
+      projection_ref <- newIORef (Vec2F (-1) (-1), Vec2F 1 1)
+      GLFW.setWindowSizeCallback $ resizeWindow projection_ref
+      
+      let engineData = EngineData { projection = projection_ref }
+          
+      -- invoke the active drawing loop
+      loop engineData executeFrame renderFrame initialGameState
+      
   GLFW.terminate
 
 
@@ -98,11 +101,16 @@ loop engineData executeFrame renderFrame currentGameState = do
     loop engineData executeFrame renderFrame newGameState
 
 
-initializeGLFW :: IO ()
-initializeGLFW = do
-  GLFW.initialize
-  GLFW.setWindowBufferSwapInterval 1
-
+initializeGLFW :: IO () -> IO ()
+initializeGLFW onSucess = do
+  success <- GLFW.initialize
+  if not success
+   then putStrLn "Failed to initialize GLFW"
+   else do 
+     GLFW.setWindowBufferSwapInterval 1
+     onSucess
+     GLFW.terminate
+     
 initializeGL :: IO ()
 initializeGL = do
   GL.shadeModel $= GL.Smooth
@@ -148,9 +156,9 @@ startFrame = do
   
   
 renderLineList :: [Vec2F] -> RenderShape
-renderLineList lines = RenderShape $ do
+renderLineList ls = RenderShape $ do
   GL.color $ color3 1 0 0
-  GL.renderPrimitive GL.Lines $ mapM_  point2vertex lines
+  GL.renderPrimitive GL.Lines $ mapM_  point2vertex ls
   where 
     point2vertex (Vec2F x y) = GL.vertex $ vertex3 (realToFrac x) (realToFrac y) 0
  
@@ -175,8 +183,8 @@ vertex3 = GL.Vertex3
 color3 :: GL.GLfloat -> GL.GLfloat -> GL.GLfloat -> GL.Color3 GL.GLfloat
 color3 = GL.Color3
 
-vec2IToVec2F :: Vec2I -> Vec2F
-vec2IToVec2F (Vec2I xi yi) = Vec2F (fromIntegral xi) (fromIntegral yi)
+--vec2IToVec2F :: Vec2I -> Vec2F
+--vec2IToVec2F (Vec2I xi yi) = Vec2F (fromIntegral xi) (fromIntegral yi)
 
-glSizeToVec2F :: GL.Size -> Vec2F
-glSizeToVec2F (GL.Size h w) = Vec2F (fromIntegral h) (fromIntegral w)
+--glSizeToVec2F :: GL.Size -> Vec2F
+--glSizeToVec2F (GL.Size h w) = Vec2F (fromIntegral h) (fromIntegral w)
