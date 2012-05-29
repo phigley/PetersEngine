@@ -22,18 +22,18 @@ main = do
 renderGameData :: GameData -> Render
 renderGameData g = 
     player : as
-    where player = renderLineStrip . makePlayerShape . ship $ g
-          as = map (renderLineStrip . makeAsteroidShape) $ asteroids g 
+    where player = renderLineStrip . makeTransposedShape . ship $ g
+          as = map (renderLineStrip . makeTransposedShape) . asteroids $ g 
 
-makePlayerShape :: Ship -> [Vec2F]
-makePlayerShape s = map (p +) ls
-    where p = shipPos s
-          ls = shipShape s          
+class Shape a where
+    pos :: a -> Vec2F
+    shape :: a -> [Vec2F]
+    
+makeTransposedShape :: Shape a => a -> [Vec2F]
+makeTransposedShape s = map (p +) ls
+    where p = pos s
+          ls = shape s
 
-makeAsteroidShape :: Asteroid -> [Vec2F]
-makeAsteroidShape a = map (p +) ls
-    where p = asteroidPos a
-          ls = asteroidShape a          
 
 data GameData = GameData 
     { ship :: Ship
@@ -44,12 +44,19 @@ data Ship = Ship
     { shipPos :: Vec2F
     , shipShape :: [Vec2F]
     }
-    
+
+instance Shape Ship where
+    pos = shipPos
+    shape = shipShape
+        
 data Asteroid = Asteroid
     { asteroidPos :: Vec2F
     , asteroidShape :: [Vec2F]
     }
 
+instance Shape Asteroid where
+    pos = asteroidPos
+    shape = asteroidShape
 
 initialPlayerShip :: Ship
 initialPlayerShip = Ship
