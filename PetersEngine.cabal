@@ -43,7 +43,8 @@ executable asteroids
                    mtl,
                    Vec,
                    OpenGL,
-                   GLFW-b
+                   GLFW-b,
+                   MonadRandom
   hs-source-dirs:  src
   ghc-options:     -Wall -rtsopts
   other-modules:   Graphics.UI.Engine
