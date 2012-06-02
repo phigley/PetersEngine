@@ -48,5 +48,5 @@ executable asteroids
   hs-source-dirs:  src
   ghc-options:     -Wall -rtsopts
   other-modules:   Graphics.UI.Engine
-  main-is:         asteroids.hs
+  main-is:         asteroids/asteroids.hs
 
