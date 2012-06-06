@@ -48,8 +48,12 @@ executable asteroids
                    OpenGL,
                    GLFW-b,
                    MonadRandom
-  hs-source-dirs:  src
+  hs-source-dirs:  
+                   src, 
+                   src/asteroids
   ghc-options:     -Wall -rtsopts
-  other-modules:   Graphics.UI.Engine
-  main-is:         asteroids/asteroids.hs
+  other-modules:   
+                   Graphics.UI.Engine,
+                   GameData
+  main-is:           asteroids.hs
 
