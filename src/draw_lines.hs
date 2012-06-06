@@ -4,9 +4,9 @@ import Control.Monad
 import Control.Monad.State
 
 import Graphics.UI.Engine
-import Data.Vec.Packed
+import Data.Vect.Float
 
-type Point = Vec2F
+type Point = Vec2
 type PointList = [Point]
 
 type ModelT = StateT GameState Engine

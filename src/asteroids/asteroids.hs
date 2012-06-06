@@ -1,6 +1,6 @@
 module Main where
 
-import Data.Vec.Packed
+import Data.Vect.Float
 import Control.Monad
 import Control.Monad.Random
 
@@ -26,11 +26,11 @@ renderGameData g =
           as = map (renderLineStrip . makeTransposedShape) . asteroids $ g 
 
 class Shape a where
-    pos :: a -> Vec2F
-    shape :: a -> [Vec2F]
+    pos :: a -> Vec2
+    shape :: a -> [Vec2]
     
-makeTransposedShape :: Shape a => a -> [Vec2F]
-makeTransposedShape s = map (p +) ls
+makeTransposedShape :: Shape a => a -> [Vec2]
+makeTransposedShape s = map (p &+) ls
     where p = pos s
           ls = shape s
 
@@ -41,8 +41,8 @@ data GameData = GameData
     }
     
 data Ship = Ship
-    { shipPos :: Vec2F
-    , shipShape :: [Vec2F]
+    { shipPos :: Vec2
+    , shipShape :: [Vec2]
     }
 
 instance Shape Ship where
@@ -50,8 +50,8 @@ instance Shape Ship where
     shape = shipShape
         
 data Asteroid = Asteroid
-    { asteroidPos :: Vec2F
-    , asteroidShape :: [Vec2F]
+    { asteroidPos :: Vec2
+    , asteroidShape :: [Vec2]
     }
 
 instance Shape Asteroid where
@@ -60,13 +60,13 @@ instance Shape Asteroid where
 
 initialPlayerShip :: Ship
 initialPlayerShip = Ship
-    { shipPos = Vec2F 0 0
+    { shipPos = Vec2 0 0
     , shipShape = 
-       [ Vec2F   0    0.05
-       , Vec2F  0.025   (-0.0125)
-       , Vec2F   0     (-0.006)
-       , Vec2F (-0.025) (-0.0125)
-       , Vec2F   0    0.05
+       [ Vec2   0    0.05
+       , Vec2  0.025   (-0.0125)
+       , Vec2   0     (-0.006)
+       , Vec2 (-0.025) (-0.0125)
+       , Vec2   0    0.05
        ]
      }
        
@@ -77,7 +77,7 @@ initialGameState = GameData
     }
     
 
-createAsteroidShape :: (RandomGen g) => Rand g [Vec2F]
+createAsteroidShape :: (RandomGen g) => Rand g [Vec2]
 createAsteroidShape = do
     sides <- getRandomR (3,12)
     radii <- replicateM sides $ getRandomR (0.1, 0.25)
@@ -86,7 +86,7 @@ createAsteroidShape = do
         addVariance a = do av <- getRandomR (-anglevariance, anglevariance)
                            return (av + a)
     angles <- mapM addVariance $ take sides $ iterate ((2 * pi / fromIntegral sides) +) 0
-    let toCoord a r = Vec2F (r * cos a) (r * sin a)
+    let toCoord a r = Vec2 (r * cos a) (r * sin a)
         result = zipWith toCoord angles radii ++ [head result]
     return result
     
@@ -96,6 +96,6 @@ createAsteroid = do
     s <- evalRandIO createAsteroidShape
     px <- evalRandIO $ getRandomR (-1, 1)
     py <- evalRandIO $ getRandomR (-1, 1)
-    return Asteroid {asteroidPos = Vec2F px py, asteroidShape = s}
+    return Asteroid {asteroidPos = Vec2 px py, asteroidShape = s}
     
 

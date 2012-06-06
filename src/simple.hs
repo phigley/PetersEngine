@@ -3,19 +3,19 @@ module Main where
 import Control.Monad.State
 
 import Graphics.UI.Engine
-import Data.Vec.Packed
+import Data.Vect.Float
 
-type Point = Vec2F
+type Point = Vec2
 type PointList = [Point]
 
 type ModelT = StateT PointList Engine
 data Action m = Action { executeAction :: m (Action m) }
 
 box :: PointList
-box = [ Vec2F   0.25    0.25
-      , Vec2F (-0.25)   0.25
-      , Vec2F (-0.25) (-0.25)
-      , Vec2F   0.25  (-0.25) 
+box = [ Vec2   0.25    0.25
+      , Vec2 (-0.25)   0.25
+      , Vec2 (-0.25) (-0.25)
+      , Vec2   0.25  (-0.25) 
       , head box ]
 
 windowSpec :: WindowSpec

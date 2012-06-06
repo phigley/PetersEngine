@@ -19,7 +19,7 @@ Executable drawlines_engine_use
                    cabal-macosx,
                    OpenGL,
                    GLFW-b,
-                   Vec,
+                   vect,
                    mtl
   other-modules:     Graphics.UI.Engine
 
@@ -29,7 +29,7 @@ executable simple
                    cabal-macosx,
                    OpenGL,
                    GLFW-b,
-                   Vec,
+                   vect,
                    mtl
   ghc-options:       -Wall -rtsopts
   hs-source-dirs:    src
@@ -41,7 +41,7 @@ executable asteroids
   build-depends:   
                    base >= 4,
                    mtl,
-                   Vec,
+                   vect,
                    OpenGL,
                    GLFW-b,
                    MonadRandom

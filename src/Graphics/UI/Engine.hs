@@ -18,14 +18,14 @@ import qualified Graphics.UI.GLFW as GLFW
 
 import Graphics.Rendering.OpenGL ( ($=) )
 
-import Data.Vec.Packed
+import Data.Vect.Float
 import Data.IORef
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Reader
 
 data EngineData = EngineData 
-                  { projection :: IORef (Vec2F, Vec2F)
+                  { projection :: IORef (Vec2, Vec2)
                   }
 
 type EngineT = ReaderT EngineData IO
@@ -76,7 +76,7 @@ executeEngine spec initialGameState executeFrame renderFrame =   initializeGLFW 
       -- set 2D orthogonal view inside windowSizeCallback because
       -- any change to the Window size should result in different
       -- OpenGL Viewport.
-      projection_ref <- newIORef (Vec2F (-1) (-1), Vec2F 1 1)
+      projection_ref <- newIORef (Vec2 (-1) (-1), Vec2 1 1)
       GLFW.setWindowSizeCallback $ resizeWindow projection_ref
       
       let engineData = EngineData { projection = projection_ref }
@@ -120,28 +120,28 @@ initializeGL = do
   GL.blendFunc $= (GL.SrcAlpha, GL.OneMinusSrcAlpha)
   GL.lineWidth $= 1.5
 
-resizeWindow :: IORef (Vec2F, Vec2F) -> Int -> Int -> IO ()
+resizeWindow :: IORef (Vec2, Vec2) -> Int -> Int -> IO ()
 resizeWindow projection_ref w h = do
   let size = GL.Size (fromIntegral w) (fromIntegral h)
   GL.viewport $= (GL.Position 0 0, size)
   GL.matrixMode $= GL.Projection
   GL.loadIdentity
-  (Vec2F x0 y0, Vec2F x1 y1) <- readIORef projection_ref
+  (Vec2 x0 y0, Vec2 x1 y1) <- readIORef projection_ref
   GL.ortho2D (realToFrac x0) (realToFrac x1) (realToFrac y1) (realToFrac y0)
 
 isLMBPressed :: Engine Bool
 isLMBPressed = Engine . liftIO 
                $ GLFW.mouseButtonIsPressed GLFW.MouseButton0
 
-getMousePos :: Engine Vec2F
+getMousePos :: Engine Vec2
 getMousePos = Engine $ do
       (x, y) <- liftIO GLFW.getMousePosition 
       (wx, wy) <- liftIO GLFW.getWindowDimensions
       engineData <- ask
-      ( Vec2F minpx minpy, Vec2F maxpx maxpy ) <- liftIO . readIORef $ projection engineData
+      ( Vec2 minpx minpy, Vec2 maxpx maxpy ) <- liftIO . readIORef $ projection engineData
       let xf = minpx + (maxpx - minpx)* fromIntegral x / fromIntegral wx
           yf = minpy + (maxpy - minpy)* fromIntegral y / fromIntegral wy
-      return $ Vec2F xf yf
+      return $ Vec2 xf yf
       
 startFrame :: IO Bool
 startFrame = do
@@ -155,22 +155,22 @@ startFrame = do
   return $ window_opened && not esc_pressed
   
   
-renderLineList :: [Vec2F] -> RenderShape
+renderLineList :: [Vec2] -> RenderShape
 renderLineList ls = RenderShape $ do
   GL.color $ color3 1 0 0
   GL.renderPrimitive GL.Lines $ mapM_  point2vertex ls
   where 
-    point2vertex (Vec2F x y) = GL.vertex $ vertex3 (realToFrac x) (realToFrac y) 0
+    point2vertex (Vec2 x y) = GL.vertex $ vertex3 (realToFrac x) (realToFrac y) 0
  
-renderLineStrip :: [Vec2F] -> RenderShape
+renderLineStrip :: [Vec2] -> RenderShape
 renderLineStrip linestrip = RenderShape $ do
   GL.color $ color3 1 0 0
   GL.renderPrimitive GL.LineStrip $ mapM_  point2vertex linestrip
   where 
-    point2vertex (Vec2F x y) = GL.vertex $ vertex3 (realToFrac x) (realToFrac y) 0
+    point2vertex (Vec2 x y) = GL.vertex $ vertex3 (realToFrac x) (realToFrac y) 0
 
---renderString :: Vec2F -> String -> Engine ()
---renderString (Vec2F x y) str = Engine . liftIO . GL.preservingMatrix $ do    
+--renderString :: Vec2 -> String -> Engine ()
+--renderString (Vec2 x y) str = Engine . liftIO . GL.preservingMatrix $ do    
 --  GL.translate (GL.Vector3 (realToFrac x) (realToFrac y) (0::GL.GLfloat))
 --  GL.scale 1 (-1) (1::GL.GLfloat)
 --  GLFW.renderString GLFW.Fixed8x16 str
@@ -183,8 +183,8 @@ vertex3 = GL.Vertex3
 color3 :: GL.GLfloat -> GL.GLfloat -> GL.GLfloat -> GL.Color3 GL.GLfloat
 color3 = GL.Color3
 
---vec2IToVec2F :: Vec2I -> Vec2F
---vec2IToVec2F (Vec2I xi yi) = Vec2F (fromIntegral xi) (fromIntegral yi)
+--vec2IToVec2 :: Vec2I -> Vec2
+--vec2IToVec2 (Vec2I xi yi) = Vec2 (fromIntegral xi) (fromIntegral yi)
 
---glSizeToVec2F :: GL.Size -> Vec2F
---glSizeToVec2F (GL.Size h w) = Vec2F (fromIntegral h) (fromIntegral w)
+--glSizeToVec2 :: GL.Size -> Vec2
+--glSizeToVec2 (GL.Size h w) = Vec2 (fromIntegral h) (fromIntegral w)
