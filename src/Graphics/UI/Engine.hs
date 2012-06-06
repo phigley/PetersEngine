@@ -19,6 +19,8 @@ import qualified Graphics.UI.GLFW as GLFW
 import Graphics.Rendering.OpenGL ( ($=) )
 
 import Data.Vect.Float
+import Data.Vect.Float.OpenGL
+
 import Data.IORef
 import Control.Monad
 import Control.Monad.Trans
@@ -158,16 +160,14 @@ startFrame = do
 renderLineList :: [Vec2] -> RenderShape
 renderLineList ls = RenderShape $ do
   GL.color $ color3 1 0 0
-  GL.renderPrimitive GL.Lines $ mapM_  point2vertex ls
-  where 
-    point2vertex (Vec2 x y) = GL.vertex $ vertex3 (realToFrac x) (realToFrac y) 0
+  GL.renderPrimitive GL.Lines $ mapM_  GL.vertex ls
+
+
  
 renderLineStrip :: [Vec2] -> RenderShape
 renderLineStrip linestrip = RenderShape $ do
   GL.color $ color3 1 0 0
-  GL.renderPrimitive GL.LineStrip $ mapM_  point2vertex linestrip
-  where 
-    point2vertex (Vec2 x y) = GL.vertex $ vertex3 (realToFrac x) (realToFrac y) 0
+  GL.renderPrimitive GL.LineStrip $ mapM_  GL.vertex linestrip
 
 --renderString :: Vec2 -> String -> Engine ()
 --renderString (Vec2 x y) str = Engine . liftIO . GL.preservingMatrix $ do    
@@ -175,10 +175,6 @@ renderLineStrip linestrip = RenderShape $ do
 --  GL.scale 1 (-1) (1::GL.GLfloat)
 --  GLFW.renderString GLFW.Fixed8x16 str
 
--- This exists just to fix type.
-vertex3 :: GL.GLfloat -> GL.GLfloat -> GL.GLfloat -> GL.Vertex3 GL.GLfloat
-vertex3 = GL.Vertex3
- 
 -- This exists just to fix type.
 color3 :: GL.GLfloat -> GL.GLfloat -> GL.GLfloat -> GL.Color3 GL.GLfloat
 color3 = GL.Color3

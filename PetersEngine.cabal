@@ -20,6 +20,7 @@ Executable drawlines_engine_use
                    OpenGL,
                    GLFW-b,
                    vect,
+                   vect-opengl,
                    mtl
   other-modules:     Graphics.UI.Engine
 
@@ -30,6 +31,7 @@ executable simple
                    OpenGL,
                    GLFW-b,
                    vect,
+                   vect-opengl,
                    mtl
   ghc-options:       -Wall -rtsopts
   hs-source-dirs:    src
@@ -42,6 +44,7 @@ executable asteroids
                    base >= 4,
                    mtl,
                    vect,
+                   vect-opengl,
                    OpenGL,
                    GLFW-b,
                    MonadRandom
