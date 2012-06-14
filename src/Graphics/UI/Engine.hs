@@ -19,7 +19,7 @@ import qualified Graphics.UI.GLFW as GLFW
 import Graphics.Rendering.OpenGL ( ($=) )
 
 import Data.Vect.Float
-import Data.Vect.Float.OpenGL
+import Data.Vect.Float.OpenGL ()
 
 import Data.IORef
 import Control.Monad
