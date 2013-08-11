@@ -7,7 +7,6 @@ module Graphics.UI.Engine
        , executeEngine
        , renderLineList
        , renderLineStrip
---       , renderString
        , isLMBPressed
        , getMousePos
        )  where
@@ -25,9 +24,11 @@ import Data.IORef
 import Control.Monad
 import Control.Monad.Trans
 import Control.Monad.Reader
+import Control.Concurrent
 
 data EngineData = EngineData 
                   { projection :: IORef (Vec2, Vec2)
+                  , window :: GLFW.Window
                   }
 
 type EngineT = ReaderT EngineData IO
@@ -43,12 +44,15 @@ data WindowSpec = WindowSpec { windowWidth :: Int
                              , windowTitle :: String 
                              }
 
-doOpenWindow :: GLFW.DisplayOptions -> IO () -> IO ()
-doOpenWindow displayOptions onSucess = do
-    success <- GLFW.openWindow displayOptions
-    if success
-      then onSucess >> GLFW.closeWindow
-      else putStrLn "Failed to open window."
+doOpenWindow :: Int -> Int -> String -> (GLFW.Window -> IO ()) -> IO ()
+doOpenWindow w h title onSucess = do
+    maybeWin <- GLFW.createWindow w h title Nothing Nothing
+    case maybeWin of 
+       Nothing  -> error "Failed to open window."
+       Just win -> do
+          GLFW.makeContextCurrent $ Just win
+          onSucess win 
+          GLFW.setWindowShouldClose win True
 
 executeEngine :: forall gameState . 
                 WindowSpec   -- | initial window configuration
@@ -60,14 +64,9 @@ executeEngine spec initialGameState executeFrame renderFrame =   initializeGLFW 
   -- open window
   let width = fromIntegral . windowWidth $ spec 
       height = fromIntegral . windowHeight $ spec
-      displayOptions = GLFW.defaultDisplayOptions 
-                         { GLFW.displayOptions_width = width
-                         , GLFW.displayOptions_height = height
-                         , GLFW.displayOptions_numAlphaBits = 8
-                         }
+      title = windowTitle spec
                          
-  doOpenWindow displayOptions $ do
-      GLFW.setWindowTitle $ windowTitle spec
+  doOpenWindow width height title $ \win -> do
       
         -- This must happen after a window has been opened.
       initializeGL
@@ -79,9 +78,12 @@ executeEngine spec initialGameState executeFrame renderFrame =   initializeGLFW 
       -- any change to the Window size should result in different
       -- OpenGL Viewport.
       projection_ref <- newIORef (Vec2 (-1) (-1), Vec2 1 1)
-      GLFW.setWindowSizeCallback $ resizeWindow projection_ref
+      GLFW.setWindowSizeCallback win . Just $ resizeWindow projection_ref
       
-      let engineData = EngineData { projection = projection_ref }
+      let engineData = EngineData 
+                { projection = projection_ref 
+                , window = win
+                }
           
       -- invoke the active drawing loop
       loop engineData executeFrame renderFrame initialGameState
@@ -96,7 +98,7 @@ loop :: forall gameState .
        -> gameState 
        -> IO ()
 loop engineData executeFrame renderFrame currentGameState = do
-  continue <- startFrame
+  continue <- startFrame . window $ engineData
   when continue $ do
     mapM_ runRenderShape $ renderFrame currentGameState
     newGameState <- runReaderT (runEngine $ executeFrame currentGameState) engineData
@@ -105,11 +107,10 @@ loop engineData executeFrame renderFrame currentGameState = do
 
 initializeGLFW :: IO () -> IO ()
 initializeGLFW onSucess = do
-  success <- GLFW.initialize
+  success <- GLFW.init
   if not success
    then putStrLn "Failed to initialize GLFW"
    else do 
-     GLFW.setWindowBufferSwapInterval 1
      onSucess
      GLFW.terminate
      
@@ -122,8 +123,8 @@ initializeGL = do
   GL.blendFunc $= (GL.SrcAlpha, GL.OneMinusSrcAlpha)
   GL.lineWidth $= 1.5
 
-resizeWindow :: IORef (Vec2, Vec2) -> Int -> Int -> IO ()
-resizeWindow projection_ref w h = do
+resizeWindow :: IORef (Vec2, Vec2) -> GLFW.Window -> Int -> Int -> IO ()
+resizeWindow projection_ref _ w h = do
   let size = GL.Size (fromIntegral w) (fromIntegral h)
   GL.viewport $= (GL.Position 0 0, size)
   GL.matrixMode $= GL.Projection
@@ -132,29 +133,33 @@ resizeWindow projection_ref w h = do
   GL.ortho2D (realToFrac x0) (realToFrac x1) (realToFrac y1) (realToFrac y0)
 
 isLMBPressed :: Engine Bool
-isLMBPressed = Engine . liftIO 
-               $ GLFW.mouseButtonIsPressed GLFW.MouseButton0
+isLMBPressed = Engine $ do
+               win <- asks window
+               mb_state <- liftIO $ GLFW.getMouseButton win GLFW.MouseButton'1
+               return $ mb_state == GLFW.MouseButtonState'Pressed
 
 getMousePos :: Engine Vec2
 getMousePos = Engine $ do
-      (x, y) <- liftIO GLFW.getMousePosition 
-      (wx, wy) <- liftIO GLFW.getWindowDimensions
       engineData <- ask
+      let win = window engineData
+      (x, y) <- liftIO $ GLFW.getCursorPos win
+      (wx, wy) <- liftIO $ GLFW.getWindowSize win
       ( Vec2 minpx minpy, Vec2 maxpx maxpy ) <- liftIO . readIORef $ projection engineData
-      let xf = minpx + (maxpx - minpx)* fromIntegral x / fromIntegral wx
-          yf = minpy + (maxpy - minpy)* fromIntegral y / fromIntegral wy
+      let xf = minpx + (maxpx - minpx) *  realToFrac x /  fromIntegral wx
+          yf = maxpy + (minpy - maxpy) *  realToFrac y /  fromIntegral wy
       return $ Vec2 xf yf
       
-startFrame :: IO Bool
-startFrame = do
-  GLFW.sleep 0.001
-  GLFW.swapBuffers
+startFrame :: GLFW.Window -> IO Bool
+startFrame win = do
+  threadDelay 1
+  GLFW.swapBuffers win
+  GLFW.pollEvents
   GL.clear [GL.ColorBuffer]
   
-  esc_pressed <- GLFW.keyIsPressed GLFW.KeyEsc
-  window_opened <- GLFW.windowIsOpen
+  esc_state <- GLFW.getKey win GLFW.Key'Escape
+  window_close <- GLFW.windowShouldClose win
   
-  return $ window_opened && not esc_pressed
+  return $ not window_close && esc_state /= GLFW.KeyState'Pressed
   
   
 renderLineList :: [Vec2] -> RenderShape
@@ -168,12 +173,6 @@ renderLineStrip :: [Vec2] -> RenderShape
 renderLineStrip linestrip = RenderShape $ do
   GL.color $ color3 1 0 0
   GL.renderPrimitive GL.LineStrip $ mapM_  GL.vertex linestrip
-
---renderString :: Vec2 -> String -> Engine ()
---renderString (Vec2 x y) str = Engine . liftIO . GL.preservingMatrix $ do    
---  GL.translate (GL.Vector3 (realToFrac x) (realToFrac y) (0::GL.GLfloat))
---  GL.scale 1 (-1) (1::GL.GLfloat)
---  GLFW.renderString GLFW.Fixed8x16 str
 
 -- This exists just to fix type.
 color3 :: GL.GLfloat -> GL.GLfloat -> GL.GLfloat -> GL.Color3 GL.GLfloat
