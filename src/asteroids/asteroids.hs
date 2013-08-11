@@ -57,7 +57,7 @@ createAsteroidShape = do
     sides <- getRandomR (3,12)
     radii <- replicateM sides $ getRandomR (0.1, 0.25)
     let anglevariance = pi / fromIntegral sides
-        addVariance :: Float -> (RandomGen g) => Rand g Float
+        addVariance :: (RandomGen g) => Float -> Rand g Float
         addVariance a = do av <- getRandomR (-anglevariance, anglevariance)
                            return (av + a)
     angles <- mapM addVariance $ take sides $ iterate ((2 * pi / fromIntegral sides) +) 0
